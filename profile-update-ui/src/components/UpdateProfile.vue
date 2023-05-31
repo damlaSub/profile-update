@@ -8,19 +8,22 @@ export default {
   },
   data() {
     return {
-      form: {
-        file: '',
-        description: ''
+      profile: {
+        avatar: null
+      },
+      inputs: {
+        file: null,
+        description: null
       }
     }
   },
 
   validations() {
     return {
-      form: {
+      inputs: {
         file: {
           maxValue: (file) => {
-            return file.size > 512000 ? false : true
+            return file === null || file.size < 512000
           }
         },
 
@@ -31,12 +34,30 @@ export default {
     }
   },
   methods: {
-    handleFileUpload(event) {
-      this.form.file = event.target.files[0]
+    async getProfile() {
+      const response = await this.$axios.get('/profiles/1')
+      const data = response.data
+      this.profile.avatar = data.avatar
+      this.inputs.description = data.description
     },
-    submitForm(event) {
-      this.v$.$validate()
+    async updateProfile() {
+      const valid = await this.v$.$validate()
+      if (valid) {
+        const formData = new FormData()
+        if (this.inputs.file != null) {
+          formData.append('avatar', this.inputs.file)
+        }
+        formData.append('description', this.inputs.description)
+        const response = await this.$axios.patch('/profiles/1', formData)
+        this.profile.avatar = response.data
+      }
+    },
+    handleFileUpload(event) {
+      this.inputs.file = event.target.files[0]
     }
+  },
+  mounted() {
+    this.getProfile()
   }
 }
 </script>
@@ -46,47 +67,44 @@ export default {
     <h1>My Profile</h1>
     <div class="row row-cols-1 row-cols-md-2 mb-1 mt-4">
       <div class="col-md-4 mb-5">
-        <img
-          src="/images/1d53713d-6b20-4398-a1a8-a598ce19b1bdboule_noire.jpg"
-          class="rounded img-fluid"
-        />
+        <img :src="'/images/' + profile.avatar" class="rounded img-fluid" />
       </div>
       <div class="col-md-4"></div>
     </div>
 
     <div class="mb-3 mt-4">
-      <form @submit.prevent="submitForm">
+      <form novalidate @submit.prevent="updateProfile">
         <div>
           <input
-            v-on:change="handleFileUpload"
+            :class="{ 'is-invalid': v$.inputs.file.$error }"
             name="formFile"
             id="formFile"
             class="form-control"
             type="file"
             accept="image/png,image/gif,image/jpeg"
+            @change="handleFileUpload"
           />
-          <div class="input-errors" v-for="(error, index) of v$.form.file.$errors">
-            <div class="form-text text-danger">Image size must be less than 500ko</div>
+          <div class="form-text text-danger" v-if="v$.inputs.file.$error">
+            Image size must be less than 500ko
           </div>
-          <div class="form-text mb-3">Photo, avatar or any image.</div>
+          <div class="form-text mb-3" v-else>Photo, avatar or any image.</div>
         </div>
-        <div :class="{ error: v$.form.description.$errors.maxLength }">
+        <div :class="{ error: v$.inputs.description.$errors.maxLength }">
           <label for="description" class="form-label">Description</label>
           <textarea
-            v-model="v$.form.description.$model"
+            v-model="v$.inputs.description.$model"
             name="description"
             id="description"
             class="form-control"
             rows="10"
-          ></textarea>
-          <div class="input-errors" v-for="(error, index) of v$.form.description.$errors">
-            <div class="form-text error-msg text-danger">Text with a maximum of 1000 chars .</div>
+            >{{ inputs.description }}</textarea
+          >
+          <div class="input-errors" :class="{ 'text-danger': v$.inputs.description.$error }">
+            Text with a maximum of 1000 chars
           </div>
         </div>
         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4 buttons-w">
-          <button class="btn btn-primary me-md-2" type="submit" :disabled="v$.form.invalid">
-            Update
-          </button>
+          <button class="btn btn-primary me-md-2" type="submit">Update</button>
         </div>
       </form>
     </div>
