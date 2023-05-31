@@ -43,13 +43,7 @@ export default {
     async updateProfile() {
       const valid = await this.v$.$validate()
       if (valid) {
-        const formData = new FormData()
-        if (this.inputs.file != null) {
-          formData.append('avatar', this.inputs.file)
-        }
-        formData.append('description', this.inputs.description)
-        const response = await this.$axios.patch('/profiles/1', formData)
-        this.profile.avatar = response.data
+        //todo :)
       }
     },
     handleFileUpload(event) {
